@@ -36,7 +36,7 @@ namespace AgnaresImageEditorNew
             }
         }
 
-        public Bitmap CropImage(Image source, int x, int y, int width, int height)
+        public Bitmap CropImage(Bitmap source, int x, int y, int width, int height)
         {
             Rectangle crop = new Rectangle(x, y, width, height);
             var bmp = new Bitmap(crop.Width, crop.Height);

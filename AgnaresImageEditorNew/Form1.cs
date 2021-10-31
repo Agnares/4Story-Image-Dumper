@@ -90,18 +90,16 @@ namespace AgnaresImageEditorNew
 
         private void button2_Click(object sender, EventArgs e)
         {
-            int counter = 0;
-            foreach (LoadIMG.img.IMAGESET imgset in img.m_mapIMG.Values)
+            for(int i = 0; i < img.m_mapIMG.Count; i++)
             {
                 string subPath = ".\\dumped";
-                bool exists = System.IO.Directory.Exists(subPath);
-                if (!exists)
-                    System.IO.Directory.CreateDirectory(subPath);
+                if (!Directory.Exists(subPath))
+                    Directory.CreateDirectory(subPath);
 
-                GetFinishedImage(imgset).Save(subPath + "\\img_" + counter + ".png", ImageFormat.Png);
-
-                counter++;
+                GetFinishedImage(img.m_mapIMG.ElementAt(i).Value).Save(subPath + "\\img_" + img.m_mapIMG.ElementAt(i).Key + ".png", ImageFormat.Png);
             }
+
+            MessageBox.Show("Img dumping finished!");
         }
     }
 }

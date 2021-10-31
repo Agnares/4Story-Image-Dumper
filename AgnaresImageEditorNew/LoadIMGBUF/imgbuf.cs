@@ -72,9 +72,7 @@ namespace AgnaresImageEditorNew.LoadIMGBUF
                 uint dwSIZE = decompressedReader.ReadUInt32();
                 uint dwDATA = decompressedReader.ReadUInt32();
 
-                byte[] data = new byte[dwDATA];
-                for (uint i = 0; i < dwDATA; i++)
-                    data[i] = decompressedReader.ReadByte();
+                byte[] data = decompressedReader.ReadBytes(Convert.ToInt32(dwDATA));
 
                 decompressedReader.BaseStream.Seek(dwDATA, SeekOrigin.Current);
 

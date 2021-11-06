@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 using System.Drawing.Imaging;
+using System.Threading;
 using ddsparser;
 
 namespace AgnaresImageEditorNew
@@ -36,6 +37,17 @@ namespace AgnaresImageEditorNew
             }
         }
 
+        public struct sImages
+        {
+            public sImages(int index, List<Bitmap> bitmaps)
+            {
+                this.index = index;
+                this.bitmaps = bitmaps;
+            }
+            public int index { get; set; }
+            public List<Bitmap> bitmaps { get; set; }
+        }
+
         public Bitmap CropImage(Bitmap source, int x, int y, int width, int height)
         {
             Rectangle crop = new Rectangle(x, y, width, height);
@@ -44,48 +56,59 @@ namespace AgnaresImageEditorNew
             return bmp;
         }
 
-        public Bitmap MergeImages(List<Bitmap> bmpImgs, LoadIMG.img.IMAGESET imgset)
+        public List<Bitmap> MergeBitmapPartsOfAllImages(List<sImages> imgs, LoadIMG.img.IMAGESET imgset)
         {
-            var bmp = new Bitmap(imgset.m_vImage[0].m_nWidth, imgset.m_vImage[0].m_nHeight);
-            for (int i = 0; i < bmpImgs.Count; i++)
-                Graphics.FromImage(bmp).DrawImage(bmpImgs[i], imgset.m_vImage[0].m_pVERTEXDATA[i][0].m_fPosX + (bmpImgs.Count > 1 ? 0.5f : 0.0f), imgset.m_vImage[0].m_pVERTEXDATA[i][0].m_fPosY + (bmpImgs.Count > 1 ? 0.5f : 0.0f));
-            return bmp;
+            List<Bitmap> bmps = new List<Bitmap>();
+            for (int i = 0; i < imgs.Count; i++)
+            { 
+                Bitmap bmp = new Bitmap(imgset.m_vImage[i].m_nWidth, imgset.m_vImage[i].m_nHeight);
+                int nBitmapCount = imgs[i].bitmaps.Count;
+                for (int j = 0; j < nBitmapCount; j++)
+                { 
+                    Graphics.FromImage(bmp).DrawImage(imgs[i].bitmaps[j], 
+                        imgset.m_vImage[i].m_pVERTEXDATA[j][0].m_fPosX + (nBitmapCount > 1 ? 0.5f : 0.0f), 
+                        imgset.m_vImage[i].m_pVERTEXDATA[j][0].m_fPosY + (nBitmapCount > 1 ? 0.5f : 0.0f));
+                }
+                bmps.Add(bmp);
+            }
+            return bmps;
         }
 
-        public Bitmap GetFinishedImage(LoadIMG.img.IMAGESET imgset)
+        public List<Bitmap> GetFinishedImages(LoadIMG.img.IMAGESET imgset)
         {
-            List<DDSImage> ddsImgs = new List<DDSImage>();
-            List<Bitmap> bmpImgs = new List<Bitmap>();
-
-            for (int i = 0; i < imgset.m_vImage[0].m_nPartCount; i++)
+            List<sImages> imgs = new List<sImages>();
+            for (int i = 0; i < imgset.m_vImage.Count; i++)
             {
-                ddsImgs.Add(new DDSImage(Default.baseclass.Decompress(imgset.m_vImage[0].m_pT3DTEX[i].pDATA)));
+                imgs.Add(new sImages(i, new List<Bitmap>()));
+                for (int j = 0; j < imgset.m_vImage[i].m_nPartCount; j++)
+                {
+                    DDSImage dds = new DDSImage(Default.baseclass.Decompress(imgset.m_vImage[i].m_pT3DTEX[j].pDATA));
+
+                    int width = (int)(imgset.m_vImage[i].m_pVERTEXDATA[j][3].m_fPosX - imgset.m_vImage[i].m_pVERTEXDATA[j][0].m_fPosX);
+                    int height = (int)(imgset.m_vImage[i].m_pVERTEXDATA[j][3].m_fPosY - imgset.m_vImage[i].m_pVERTEXDATA[j][0].m_fPosY);
+                    int x = (int)(imgset.m_vImage[i].m_pVERTEXDATA[j][0].m_fU * dds.BitmapImage.Width);
+                    int y = (int)(imgset.m_vImage[i].m_pVERTEXDATA[j][0].m_fV * dds.BitmapImage.Height);
+
+                    imgs[i].bitmaps.Add(CropImage(dds.BitmapImage, x, y, width, height));
+                }     
             }
 
-            for (int i = 0; i < ddsImgs.Count; i++)
-            {
-                int width = (int)(imgset.m_vImage[0].m_pVERTEXDATA[i][3].m_fPosX - imgset.m_vImage[0].m_pVERTEXDATA[i][0].m_fPosX);
-                int height = (int)(imgset.m_vImage[0].m_pVERTEXDATA[i][3].m_fPosY - imgset.m_vImage[0].m_pVERTEXDATA[i][0].m_fPosY);
-                int fullwidth = ddsImgs[i].BitmapImage.Width;
-                int fullheight = ddsImgs[i].BitmapImage.Height;
-                int x = (int)(imgset.m_vImage[0].m_pVERTEXDATA[i][0].m_fU * fullwidth);
-                int y = (int)(imgset.m_vImage[0].m_pVERTEXDATA[i][0].m_fV * fullheight);
-
-                bmpImgs.Add(CropImage(ddsImgs[i].BitmapImage, x, y, width, height));
-            }
-
-            Bitmap ImageMerged = MergeImages(bmpImgs, imgset);
-
-            ddsImgs.Clear();
-            bmpImgs.Clear();
-
-            return ImageMerged;
+            return MergeBitmapPartsOfAllImages(imgs, imgset);
         }
 
         private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
             LoadIMG.img.IMAGESET imgset = img.m_mapIMG.ElementAt(listBox1.SelectedIndex).Value;
-            pictureBox1.Image = GetFinishedImage(imgset);
+            List<Bitmap> bmpFinished = GetFinishedImages(imgset);
+
+            for (int i = 0; i < bmpFinished.Count; i++)
+            {
+                pictureBox1.Image = bmpFinished[i];
+                Application.DoEvents();
+                Thread.Sleep(100);
+                if (i == bmpFinished.Count - 1)
+                    pictureBox1.Image = bmpFinished[0];
+            }
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -96,7 +119,11 @@ namespace AgnaresImageEditorNew
                 if (!Directory.Exists(subPath))
                     Directory.CreateDirectory(subPath);
 
-                GetFinishedImage(img.m_mapIMG.ElementAt(i).Value).Save(subPath + "\\img_" + img.m_mapIMG.ElementAt(i).Key + ".png", ImageFormat.Png);
+                List<Bitmap> bmpFinished = GetFinishedImages(img.m_mapIMG.ElementAt(i).Value);
+                for (int j = 0; j < bmpFinished.Count; j++)
+                {
+                    bmpFinished[j].Save(subPath + "\\img_" + img.m_mapIMG.ElementAt(i).Key + "_" + j + ".png", ImageFormat.Png);
+                }
             }
 
             MessageBox.Show("Img dumping finished!");

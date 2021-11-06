@@ -33,19 +33,12 @@ namespace AgnaresImageEditorNew
             listBox1.Items.Clear();
             foreach (KeyValuePair<uint, LoadIMG.img.IMAGESET> item in img.m_mapIMG)
             {
-                listBox1.Items.Add(item.Key);
+                int nSubImages = item.Value.m_vImage.Count;
+                if (nSubImages > 1)
+                    listBox1.Items.Add(item.Key + " subimages: " + item.Value.m_vImage.Count);
+                else
+                    listBox1.Items.Add(item.Key);
             }
-        }
-
-        public struct sImages
-        {
-            public sImages(int index, List<Bitmap> bitmaps)
-            {
-                this.index = index;
-                this.bitmaps = bitmaps;
-            }
-            public int index { get; set; }
-            public List<Bitmap> bitmaps { get; set; }
         }
 
         public Bitmap CropImage(Bitmap source, int x, int y, int width, int height)
@@ -56,17 +49,17 @@ namespace AgnaresImageEditorNew
             return bmp;
         }
 
-        public List<Bitmap> MergeBitmapPartsOfAllImages(List<sImages> imgs, LoadIMG.img.IMAGESET imgset)
+        public List<Bitmap> MergeBitmapPartsOfAllImages(List<List<Bitmap>> imgs, LoadIMG.img.IMAGESET imgset)
         {
             List<Bitmap> bmps = new List<Bitmap>();
             for (int i = 0; i < imgs.Count; i++)
-            { 
+            {
                 Bitmap bmp = new Bitmap(imgset.m_vImage[i].m_nWidth, imgset.m_vImage[i].m_nHeight);
-                int nBitmapCount = imgs[i].bitmaps.Count;
+                int nBitmapCount = imgs[i].Count;
                 for (int j = 0; j < nBitmapCount; j++)
-                { 
-                    Graphics.FromImage(bmp).DrawImage(imgs[i].bitmaps[j], 
-                        imgset.m_vImage[i].m_pVERTEXDATA[j][0].m_fPosX + (nBitmapCount > 1 ? 0.5f : 0.0f), 
+                {
+                    Graphics.FromImage(bmp).DrawImage(imgs[i][j],
+                        imgset.m_vImage[i].m_pVERTEXDATA[j][0].m_fPosX + (nBitmapCount > 1 ? 0.5f : 0.0f),
                         imgset.m_vImage[i].m_pVERTEXDATA[j][0].m_fPosY + (nBitmapCount > 1 ? 0.5f : 0.0f));
                 }
                 bmps.Add(bmp);
@@ -76,10 +69,10 @@ namespace AgnaresImageEditorNew
 
         public List<Bitmap> GetFinishedImages(LoadIMG.img.IMAGESET imgset)
         {
-            List<sImages> imgs = new List<sImages>();
+            List<List<Bitmap>> imgs = new List<List<Bitmap>>();
             for (int i = 0; i < imgset.m_vImage.Count; i++)
             {
-                imgs.Add(new sImages(i, new List<Bitmap>()));
+                imgs.Add(new List<Bitmap>());
                 for (int j = 0; j < imgset.m_vImage[i].m_nPartCount; j++)
                 {
                     DDSImage dds = new DDSImage(Default.baseclass.Decompress(imgset.m_vImage[i].m_pT3DTEX[j].pDATA));
@@ -89,8 +82,8 @@ namespace AgnaresImageEditorNew
                     int x = (int)(imgset.m_vImage[i].m_pVERTEXDATA[j][0].m_fU * dds.BitmapImage.Width);
                     int y = (int)(imgset.m_vImage[i].m_pVERTEXDATA[j][0].m_fV * dds.BitmapImage.Height);
 
-                    imgs[i].bitmaps.Add(CropImage(dds.BitmapImage, x, y, width, height));
-                }     
+                    imgs[i].Add(CropImage(dds.BitmapImage, x, y, width, height));
+                }
             }
 
             return MergeBitmapPartsOfAllImages(imgs, imgset);
@@ -113,7 +106,7 @@ namespace AgnaresImageEditorNew
 
         private void button2_Click(object sender, EventArgs e)
         {
-            for(int i = 0; i < img.m_mapIMG.Count; i++)
+            for (int i = 0; i < img.m_mapIMG.Count; i++)
             {
                 string subPath = ".\\dumped";
                 if (!Directory.Exists(subPath))

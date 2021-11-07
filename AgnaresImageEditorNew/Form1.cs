@@ -35,7 +35,7 @@ namespace AgnaresImageEditorNew
             {
                 int nSubImages = item.Value.m_vImage.Count;
                 if (nSubImages > 1)
-                    listBox1.Items.Add(item.Key + " subimages: " + item.Value.m_vImage.Count);
+                    listBox1.Items.Add(item.Key + " subimages: " + nSubImages);
                 else
                     listBox1.Items.Add(item.Key);
             }

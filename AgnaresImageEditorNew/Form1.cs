@@ -91,14 +91,20 @@ namespace AgnaresImageEditorNew
 
         private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            LoadIMG.img.IMAGESET imgset = img.m_mapIMG.ElementAt(listBox1.SelectedIndex).Value;
+            int index = listBox1.SelectedIndex;
+            LoadIMG.img.IMAGESET imgset = img.m_mapIMG.ElementAt(index).Value;
             List<Bitmap> bmpFinished = GetFinishedImages(imgset);
 
             for (int i = 0; i < bmpFinished.Count; i++)
             {
                 pictureBox1.Image = bmpFinished[i];
                 Application.DoEvents();
-                Thread.Sleep(100);
+                if (bmpFinished.Count > 1)
+                {
+                    if (index != listBox1.SelectedIndex)
+                        break;
+                    Thread.Sleep(100);
+                }
                 if (i == bmpFinished.Count - 1)
                     pictureBox1.Image = bmpFinished[0];
             }
